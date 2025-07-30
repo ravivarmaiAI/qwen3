@@ -1,16 +1,26 @@
 apiVersion: ai.sap.com/v1alpha1
 kind: ServingTemplate
 metadata:
-  name: qwen3
+  name: qwen3-template
   annotations:
-    scenarios.ai.sap.com/description: "qwen3 text generation"
+    scenarios.ai.sap.com/description: "Run a custom transformer server on SAP AI Core"
     scenarios.ai.sap.com/name: "qwen3"
-    executables.ai.sap.com/description: "qwen3 model server"
+    executables.ai.sap.com/description: "Run a custom transformer server on SAP AI Core"
     executables.ai.sap.com/name: "qwen3"
   labels:
     scenarios.ai.sap.com/id: "qwen3"
-    ai.sap.com/version: "1.1"
+    ai.sap.com/version: "2.1.2"
 spec:
+  inputs:
+    parameters:
+      - name: modelName # placeholder name
+        default: "qwen3" 
+        type: string # required for every parameters
+        description: "Model Name to be used in SAP Generative AI Hub SDK. Ensure an identical value as alias parameter"
+      - name: resourcePlan
+        type: string
+        default: "infer.s" 
+        description: "Resource Plan for free-tier"
   template:
     apiVersion: "serving.kserve.io/v1beta1"
     metadata:
@@ -19,14 +29,25 @@ spec:
         autoscaling.knative.dev/target: 1
         autoscaling.knative.dev/targetBurstCapacity: 0
       labels: |
-        ai.sap.com/resourcePlan: infer.l   # use an appropriate GPU plan
+        ai.sap.com/resourcePlan: "{{inputs.parameters.resourcePlan}}" 
     spec: |
       predictor:
         minReplicas: 1
-        maxReplicas: 3
+        maxReplicas: 1
         containers:
         - name: kserve-container
-          image: index.docker.io/ravivarmaiai/qwen3:latest
+          image: index.docker.io/ravivarmaiai/qwen3-06b:latest
           ports:
-          - containerPort: 8080
-            protocol: TCP
+            - containerPort: 8080
+              protocol: TCP
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              set -e && echo "-------------Starting transformer Server--------------" 
+              && uvicorn app:app --host 0.0.0.0 --port 8080
+          env:
+            - name: MODEL_NAME
+              value: "{{inputs.parameters.modelName}}"
+            - name: HF_HOME
+              value: "/tmp/hf-cache"
+              
