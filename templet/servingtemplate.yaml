@@ -1,0 +1,32 @@
+apiVersion: ai.sap.com/v1alpha1
+kind: ServingTemplate
+metadata:
+  name: qwen3
+  annotations:
+    scenarios.ai.sap.com/description: "qwen3 text generation"
+    scenarios.ai.sap.com/name: "qwen3"
+    executables.ai.sap.com/description: "qwen3 model server"
+    executables.ai.sap.com/name: "qwen3"
+  labels:
+    scenarios.ai.sap.com/id: "qwen3"
+    ai.sap.com/version: "1.1"
+spec:
+  template:
+    apiVersion: "serving.kserve.io/v1beta1"
+    metadata:
+      annotations: |
+        autoscaling.knative.dev/metric: concurrency
+        autoscaling.knative.dev/target: 1
+        autoscaling.knative.dev/targetBurstCapacity: 0
+      labels: |
+        ai.sap.com/resourcePlan: infer.l   # use an appropriate GPU plan
+    spec: |
+      predictor:
+        minReplicas: 1
+        maxReplicas: 3
+        containers:
+        - name: kserve-container
+          image: index.docker.io/ravivarmaiai/qwen3:latest
+          ports:
+          - containerPort: 8080
+            protocol: TCP
